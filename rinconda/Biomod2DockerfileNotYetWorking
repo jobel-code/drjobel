@@ -1,0 +1,61 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+FROM jupyter/datascience-notebook
+
+# Install Python3 packages that aren't available or up-to-date in Conda.
+RUN  pip install --quiet -U --upgrade-strategy only-if-needed --no-cache-dir \
+                bs4 \
+                ggplot \
+                lime \
+                s2sphere \
+                jxmlease
+
+## Install from requirements.txt file
+## pip freeze >amasing_requirements.txt
+#COPY amasing_requirements.txt /tmp/
+#RUN pip install --requirement /tmp/amasing_requirements.txt && \
+#    fix-permissions $CONDA_DIR && \
+#    fix-permissions /home/$NB_USER
+
+# conda list --export > amasing_exported_requirements.txt  # or
+# conda env export > amasing_env_requirements.yaml
+
+COPY amasing_exported_requirements.txt /tmp/
+RUN conda install --yes --file /tmp/amasing_exported_requirements.txt && \
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
+
+# DO NOT ADD MORE r-packages to this call as they may be in conflict with local R installation
+"""
+RUN conda install --yes  r-essentials r-reshape r-gbm  r-gam r-pROC r-zoo  r-devtools r-dplyr r-tidyverse r-formatR r-remotes r-selectr r-catools r-rjson r-tinytex r-rgdal  r-rgeos r-RColorBrewer r-RandomFields r-RNetCDF r-classInt r-deldir r-gstat r-mapdata r-maptools r-mapview r-proj4 r-raster r-DT r-ROCR r-lubridate r-rjson r-docopt r-formatR r-selectr r-jsonlite  r-rlas r-sp r-spacetime r-spatstat r-spdep r-geoR r-geosphere r-rmarkdown r-bitops r-reticulate r-ggplot2 -c conda-forge
+"""
+
+# [Enable nbextension spellchecker for markdown (or any other nbextension)](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/recipes.html#enable-nbextension-spellchecker-for-markdown-or-any-other-nbextension)
+
+USER $NB_USER
+
+RUN pip install jupyter_contrib_nbextensions && \
+    jupyter contrib nbextension install --user && \
+    # can modify or enable additional extensions here
+    jupyter nbextension enable spellchecker/main --user
+
+RUN pip install jupyter_dashboards faker && \
+    jupyter dashboards quick-setup --sys-prefix
+
+# https://github.com/ipython/ipython/wiki/Extensions-Index
+RUN pip install magic-markdown py_d3 fortran-magic
+
+#RUN #R --quiet -e "devtools::install_github('IRkernel/IRkernel')" && \
+    #R --quiet -e "IRkernel::installspec(prefix='${VENV_DIR}')" && \
+#RUN R --quiet -e "install.packages('devtools', dependencies=TRUE)" && \
+    # python support in RMarkdown
+    #R --quiet -e "install.packages('rgdal', dependencies=TRUE)" && \
+    # for plotting
+    #R --quiet -e "install.packages('ggplot2', dependencies=TRUE)" && \
+    # for knitting
+    #R --quiet -e "install.packages(c('rmarkdown', 'caTools', 'bitops', 'reticulate'), dependencies=TRUE)"  && \
+    # dependencies=TRUE # used for modelling
+    #R --quiet -e "install.packages(c('DT', 'ROCR', 'caTools', 'lubridate', 'rjson', 'littler', 'docopt', 'formatR', 'remotes', 'selectr', 'stringr', 'jsonlite', yaml), dependencies=TRUE)"
+
+RUN R --quiet -e "install.packages(c('maxent', 'SparseM', 'biomod2'))"
